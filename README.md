@@ -1,5 +1,7 @@
 # Spark Foundry
 
+[Play Spark Foundry](https://ding-ding-projects.github.io/spark-foundry/) · [Player field guide](https://ding-ding-projects.github.io/spark-foundry/docs.html)
+
 A small, self-contained incremental browser game about building a cosmic energy factory. Generate energy, automate production, unlock research, stabilize the reactor, and prestige for permanent star power.
 
 - Responsive mouse, touch, and keyboard controls

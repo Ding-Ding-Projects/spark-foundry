@@ -52,3 +52,28 @@ test('public game uses local assets, motion preference, responsive layout and ke
   assert.match(css, /:focus-visible/);
   assert.match(css, /@media\(max-width:680px\)/);
 });
+
+test('phone viewports preserve zoom and reserve safe areas on both pages', () => {
+  for (const file of pages) {
+    const viewport = attrs(read(file).match(/<meta\b[^>]*name="viewport"[^>]*>/)[0]).content;
+    assert.match(viewport, /width=device-width/);
+    assert.match(viewport, /viewport-fit=cover/);
+    assert.doesNotMatch(viewport, /user-scalable\s*=\s*(?:no|0)|maximum-scale/i);
+  }
+});
+
+test('phone CSS declares touch targets, flexible content and short-screen dialog scrolling', () => {
+  // Source-level guardrails, not a substitute for browser layout / gesture QA.
+  const css = read('style.css');
+  const phone = css.slice(css.indexOf('/* Phone controls'));
+  assert.match(phone, /button,\.topbar a,footer a,\.skip\{min-height:44px;min-width:44px\}/);
+  assert.match(phone, /grid-template-columns:34px minmax\(0,1fr\)/);
+  assert.match(phone, /grid-template-columns:repeat\(2,minmax\(0,1fr\)\)/);
+  assert.match(phone, /#ignite\{[^}]*-webkit-touch-callout:none;touch-action:pinch-zoom/);
+  assert.match(phone, /max-height:calc\(100dvh[^}]*overflow-y:auto/);
+  assert.match(phone, /@media\(max-height:600px\)/);
+  assert.match(phone, /env\(safe-area-inset-bottom\)/);
+  const guide = read('docs.html');
+  assert.match(guide, /header a,nav a,footer a\{min-height:44px/);
+  assert.match(guide, /code\{white-space:normal;overflow-wrap:anywhere\}/);
+});
