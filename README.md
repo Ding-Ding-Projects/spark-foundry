@@ -32,7 +32,7 @@ npm test
 npm run build
 ```
 
-Tests use Node's built-in test runner and cover the deterministic engine. The build runs tests, checks JavaScript syntax and HTML asset references, then copies an explicit allowlist of six public files into `dist/`. It does not copy environment files, repository metadata, source tests, or arbitrary local files.
+Tests use Node's built-in test runner and cover the deterministic engine. The build runs tests, checks JavaScript syntax and HTML asset references, then copies an explicit allowlist of seven public files into `dist/`. It does not copy environment files, repository metadata, source tests, or arbitrary local files.
 
 On Windows, `build.bat` runs the same build. `build-installer.bat` intentionally reports that a desktop installer is not applicable and exits with code 1. This is a browser-only project, not a packaged desktop application.
 
@@ -59,3 +59,7 @@ Progress stays in browser local storage. Export a save before clearing site data
 ## Verification scope
 
 `npm test` verifies engine behavior. `npm run build` additionally verifies source syntax and referenced public assets. Neither command alone proves browser rendering, accessibility, or a deployed site's availability; these require browser and deployment checks.
+
+## Responsive preview
+
+Open `preview.html` for a live 320, 390, or 430-pixel browser viewport. It shares the game save and does not emulate physical touch hardware or Safari.

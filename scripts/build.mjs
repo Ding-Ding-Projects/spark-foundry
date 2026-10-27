@@ -5,7 +5,7 @@ import { execFileSync } from 'node:child_process';
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 // Only these public assets may enter the deployable output.
-const files = ['index.html', 'style.css', 'app.js', 'engine.js', 'docs.html', 'docs.js'];
+const files = ['index.html', 'style.css', 'app.js', 'engine.js', 'docs.html', 'docs.js', 'preview.html'];
 for (const file of files) {
   const path = resolve(root, file);
   if (!(await stat(path)).isFile()) throw new Error(`Missing public asset: ${file}`);
