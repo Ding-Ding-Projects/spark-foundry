@@ -31,7 +31,12 @@ export function createSaveOwner({ locks, channel, load, flush, pause, status }) 
     abort = controller;
     report('waiting');
     // No steal/expiry: a suspended owner must flush or close before transfer.
-    Promise.resolve().then(() => locks.request('spark-foundry-v1-writer', { signal: controller.signal, ifAvailable: !wait }, async lock => {
+    // Web Locks forbids combining signal with ifAvailable: true.
+    // https://www.w3.org/TR/web-locks/#api-lock-manager-request
+    const options = wait ? { signal: controller.signal } : { ifAvailable: true };
+    Promise.resolve().then(() => {
+      if (abort !== controller || controller.signal.aborted) return;
+      return locks.request('spark-foundry-v1-writer', options, async lock => {
       if (abort !== controller || controller.signal.aborted) return;
       pending = false;
       waitingForPlay = false;
@@ -47,7 +52,8 @@ export function createSaveOwner({ locks, channel, load, flush, pause, status }) 
         report('unavailable');
       }
       await held;
-    })).catch(() => {
+      });
+    }).catch(() => {
       if (abort !== controller || controller.signal.aborted) return;
       pending = false;
       waitingForPlay = false;

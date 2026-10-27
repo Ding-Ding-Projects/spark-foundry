@@ -9,12 +9,13 @@ function lockManager() {
   function run() {
     if (busy || !queue.length) return;
     const job = queue.shift();
-    if (job.signal.aborted) { job.reject(new DOMException('Aborted', 'AbortError')); run(); return; }
+    if (job.signal?.aborted) { job.reject(new DOMException('Aborted', 'AbortError')); run(); return; }
     busy = true;
     Promise.resolve(job.fn({ name: 'writer' })).then(job.resolve, job.reject).finally(() => { busy = false; run(); });
   }
   return { request(_name, options, fn) {
-    if (options.signal.aborted) return Promise.reject(new DOMException('Aborted', 'AbortError'));
+    if (options.signal && (options.ifAvailable || options.steal)) return Promise.reject(new DOMException('Invalid Web Locks option combination', 'NotSupportedError'));
+    if (options.signal?.aborted) return Promise.reject(new DOMException('Aborted', 'AbortError'));
     if (busy && options.ifAvailable) return Promise.resolve(fn(null));
     return new Promise((resolve, reject) => { queue.push({fn, resolve, reject, signal: options.signal}); run(); });
   }};
