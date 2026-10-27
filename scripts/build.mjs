@@ -1,4 +1,5 @@
-import { cp, mkdir, readFile, rm, stat } from 'node:fs/promises';
+import { mkdir, readFile, rm, stat, writeFile } from 'node:fs/promises';
+import { createHash } from 'node:crypto';
 import { resolve, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { execFileSync } from 'node:child_process';
@@ -24,5 +25,16 @@ for (const file of files) {
 const output = resolve(root, 'dist');
 await rm(output, { recursive: true, force: true });
 await mkdir(output, { recursive: true });
-for (const file of files) await cp(resolve(root, file), resolve(output, file));
+const assets = new Map();
+for (const file of files) assets.set(file, await readFile(resolve(root, file), 'utf8'));
+const fingerprint = text => createHash('sha256').update(text).digest('hex').slice(0, 12);
+assets.set('app.js', assets.get('app.js').replace("'./engine.js'", `'./engine.js?v=${fingerprint(assets.get('engine.js'))}'`));
+for (const file of files.filter(file => file.endsWith('.html'))) {
+  let html = assets.get(file);
+  for (const asset of ['style.css', 'app.js', 'docs.js']) {
+    html = html.replaceAll(`"${asset}"`, `"${asset}?v=${fingerprint(assets.get(asset))}"`);
+  }
+  assets.set(file, html);
+}
+for (const [file, contents] of assets) await writeFile(resolve(output, file), contents);
 console.log(`Built ${files.length} validated public assets in dist/.`);
