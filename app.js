@@ -1,4 +1,4 @@
-import { createSaveOwner } from './save-owner.js?v=03c24a5c8f7e';
+import { createSaveOwner } from './save-owner.js?v=6a651d369e52';
 import { newGame, CONSTELLATIONS, CHALLENGES, CHAPTERS, ACHIEVEMENTS, buyConstellation, startChallenge, abandonChallenge, launchBeacon, chapter, checkProgress, sideReward, routingSolved, producerUnlocked, PRODUCERS, UPGRADES, rate, tapPower, tap, cost, buyProducer, buyUpgrade, tick, prestigeGain, prestige, stabilize, serialize, parseSave } from './engine.js?v=67ac8b92323e';
 
 const $ = id => document.getElementById(id);
