@@ -122,6 +122,7 @@ jobs:
         run: ./scripts/bootstrap-release.ps1
       - name: Publish and verify exact-source normal release
         env:
+          ALLOW_PUBLIC_CATALOGUE_LOOKUP: 'false'
           GH_TOKEN: ${{ secrets.RELEASE_TOKEN || secrets.ORG_TOKEN || secrets.GITHUB_TOKEN }}
         shell: powershell
         run: node scripts/publish-release.mjs

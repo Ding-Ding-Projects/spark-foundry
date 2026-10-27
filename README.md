@@ -18,7 +18,7 @@ Build a cosmic energy factory, complete a six-chapter campaign, and launch a bea
 
 ## Publication status
 
-The public Pages site initially hosts the starter edition. Publication of the expanded version is pending verification. Windows packaging and update code is included in source, but no Windows installer, portable companion, or native Windows verification is claimed here. Consult official release notes for the actual published version and attached files; a source checkout is not a tested binary release.
+The expanded campaign is published on the public Pages site. Cloud-browser checks cover narrow layouts, setup recovery, optional puzzle rewards, regex captures, autosaving, and two-tab save ownership. These checks do not establish physical-phone or native Windows behavior. A normal Windows release has been published with the unsigned installer, update feed/package, portable guide, and build companion. Artifact hashes and exact source binding have been verified; native installation and update-cycle verification remain incomplete. Consult official release notes for the actual published version and attached files; a source checkout is not a tested binary release.
 
 ## Start playing
 
@@ -59,10 +59,10 @@ The desktop application uses Electron, not a separately rewritten native game en
 
 | Output | Purpose | Current status |
 | --- | --- | --- |
-| `release/game/squirrel-windows/SparkFoundrySetup.exe` | Unsigned Squirrel.Windows game installer | Packaging source; binary and Windows install verification pending |
-| `release/game/squirrel-windows/RELEASES` and `*-full.nupkg` | Squirrel update feed and package | Publication and end-to-end update verification pending |
-| `release/builder/SparkFoundryBuilder-VERSION.exe` | Portable build companion | Packaging source; Windows execution pending |
-| `release/guide/SparkFoundryGuide-VERSION.exe` | Portable offline handbook | Packaging source; Windows execution pending |
+| `release/game/squirrel-windows/SparkFoundrySetup.exe` | Unsigned Squirrel.Windows game installer | Published; artifact verification complete, Windows installation unverified |
+| `release/game/squirrel-windows/RELEASES` and `*-full.nupkg` | Squirrel update feed and package | Published; end-to-end installed update verification pending |
+| `release/builder/SparkFoundryBuilder-VERSION.exe` | Portable build companion | Published; Windows execution pending |
+| `release/guide/SparkFoundryGuide-VERSION.exe` | Portable offline handbook | Published; Windows execution pending |
 
 On a trusted Windows source checkout, use `build.bat` for build preparation and `build-installer.bat` for packaging. Build Studio provides source-folder selection, build/run/installer actions, output logs, cancellation, and retry feedback. Only select source you trust: build scripts execute code from that folder. Initial dependency/bootstrap downloads require internet access. Packaging is Windows-only; a successful static build on another platform does not produce an installer.
 
@@ -76,7 +76,7 @@ The installed Windows game is designed to check the official HTTPS Squirrel feed
 | --- | --- | --- |
 | Gameplay | Full six-chapter loop, ending, endless play, progression and three side games | Broad long-session balance and physical-device playtesting |
 | Web and phone | Responsive controls, local saves, preview widths | Expanded deployment verification; native phone application; guaranteed offline website startup |
-| Desktop delivery | Electron shell, build UI, Squirrel packaging/update integration, portable guide | Published binaries, Windows installation/uninstallation, restart/update/cancellation runtime verification; code signing |
+| Desktop delivery | Electron shell, build UI, Squirrel packaging/update integration, portable guide | Windows installation/uninstallation, restart/update/cancellation runtime verification. Artifacts are intentionally unsigned |
 | Language and writing preferences | English interface | Cantonese and bilingual coverage; independent tone controls |
 | Setup and personalization | Game welcome card and basic settings | Real setup/resume onboarding; local personalization import |
 | Productivity controls | Searchable handbook and game-specific confirmations | Settings search, full regex workbench, command palette, notification history, reversible action history, comprehensive exports and bulk actions |
@@ -107,3 +107,13 @@ The complete game loop does not mean every broader application capability is imp
 ## Privacy and saves
 
 Progress stays in local storage for the current browser profile/origin or desktop profile. No automatic device sync exists. Reset erases permanent progress after confirmation; supernova preserves permanent progression. Export backups before clearing data. Save validation protects state structure, not competitive integrity: this is a local single-player game.
+
+## Current browser capture
+
+![Spark Foundry desktop browser interface](screenshots/gameplay-desktop.jpg)
+
+Captured from the deployed game on 2026-10-27 UTC with local test progress. This is browser evidence, not a native Windows execution claim. See `screenshots/provenance.json` for the source and deployment revisions.
+
+![Completed campaign and endless continuation](screenshots/campaign-ending.jpg)
+
+The browser campaign was also completed through normal visible controls from an existing synthetic test save, without state injection, import, reset, or prestige. Fresh-save completion is separately covered by deterministic engine tests.

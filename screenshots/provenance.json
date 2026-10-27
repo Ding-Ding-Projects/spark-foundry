@@ -1,0 +1,22 @@
+{
+  "schema": 1,
+  "captures": [
+    {
+      "schema": 1,
+      "file": "gameplay-desktop.jpg",
+      "capturedAt": "2026-10-27T21:27:16Z",
+      "sourceRevision": "b282549f6a6872f5361c974deacc9b1053ffa902",
+      "deploymentRevision": "46e25de94e0a144963debf94250078254db38d59",
+      "url": "https://ding-ding-projects.github.io/spark-foundry/?build=b282549",
+      "scope": "Desktop browser viewport with local test progress; not native Windows or physical-phone proof."
+    },
+    {
+      "file": "campaign-ending.jpg",
+      "capturedAt": "2026-10-27T21:42:23Z",
+      "sourceRevision": "b282549f6a6872f5361c974deacc9b1053ffa902",
+      "deploymentRevision": "46e25de94e0a144963debf94250078254db38d59",
+      "url": "https://ding-ding-projects.github.io/spark-foundry/?build=b282549#campaign-story",
+      "scope": "Completed through visible UI from existing synthetic test progress; not fresh-save runtime or native Windows proof."
+    }
+  ]
+}

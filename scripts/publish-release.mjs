@@ -26,7 +26,9 @@ if(releases.some(release=>release.tag_name===tag))throw new Error('Immutable rel
 const assets=validateReleaseReceipt(receipt,version).map(item=>resolve(item.path));
 assets.push(resolve('release/source.json'));
 let dish=null;
-try{
+if(process.env.ALLOW_PUBLIC_CATALOGUE_LOOKUP==='true')try{
+ const catalogueInfo=api('repos/Ding-Ding-Projects/dim-sum-photos');
+ if(catalogueInfo.private!==false||catalogueInfo.visibility!=='public')throw new Error('Public catalogue is unavailable.');
  const catalogue=JSON.parse(gh('api','repos/Ding-Ding-Projects/dim-sum-photos/contents/catalog/index.json','-H','Accept: application/vnd.github.raw+json'));
  const photos=JSON.parse(gh('api','--paginate','--slurp','repos/Ding-Ding-Projects/dim-sum-photos/releases?per_page=100')).flat();
  const published=new Set(photos.filter(release=>/^catalog-v1/.test(release.tag_name)&&!release.draft&&!release.prerelease).flatMap(release=>release.assets.map(asset=>asset.browser_download_url)));

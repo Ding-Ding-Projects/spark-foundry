@@ -6,9 +6,9 @@ This source expands the starter into a complete incremental campaign with option
 
 ## Verification boundaries
 
-Do not infer release success from source presence or a passing asset build. Record local tests, browser interaction checks, deployed-site checks, Windows packaging, clean installation, and real update-cycle testing separately. Windows artifacts and native runtime behavior remain pending unless accompanied by explicit subsequent evidence.
+Do not infer release success from source presence or a passing asset build. Record local tests, browser interaction checks, deployed-site checks, Windows packaging, clean installation, and real update-cycle testing separately. Windows release v1.5.1-run40585816616 was verified as normal and source-bound to b282549f6a6872f5361c974deacc9b1053ffa902, with all five artifact sizes and SHA-256 digests matching the downloaded source receipt. Native installation and update runtime remain unverified.
 
-The public website may still serve the starter version until the expanded commit is published and checked. Do not label it updated merely because a deployment was requested.
+The expanded website has been deployed and checked. Cloud-browser evidence covers 320/390-pixel preview layouts, setup back/skip/resume, both optional puzzles, timing rewards, regex captures, and cooperative save transfer preserving a purchase between two tabs. Physical phone and native Windows execution remain separate, unverified stages.
 
 ## Commands and outputs
 
