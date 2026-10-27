@@ -4,7 +4,7 @@ const path = require('node:path');
 const crypto = require('node:crypto');
 if (require('electron-squirrel-startup')) app.quit();
 const guide = require('../package.json').sparkMode === 'guide' || process.argv.includes('--guide');
-const files = new Set(['index.html','app.js','engine.js','style.css','docs.html','docs.js','preview.html','preferences.js','preferences-copy.js','preferences.css','regex-workbench.js','regex-worker.js','regex-workbench.css','regex-capabilities.md']);
+const files = new Set(['index.html','app.js','engine.js','save-owner.js','style.css','docs.html','docs.js','preview.html','preferences.js','preferences-copy.js','preferences.css','regex-workbench.js','regex-worker.js','regex-workbench.css','regex-capabilities.md']);
 protocol.registerSchemesAsPrivileged([{scheme:'spark',privileges:{standard:true,secure:true,supportFetchAPI:true,corsEnabled:true}}]);
 let window, closeAllowed=false, closeHandler=false, closeRequest, updateReady=false, updateBusy=false;
 let state={phase:'current',message:`Spark Foundry ${app.getVersion()} · unsigned desktop edition`};

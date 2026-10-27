@@ -1,8 +1,9 @@
 import { execFileSync } from 'node:child_process';
 import { readFileSync, writeFileSync, mkdtempSync, rmSync, statSync } from 'node:fs';
-import { basename, resolve, relative, isAbsolute, join } from 'node:path';
+import { basename, resolve, join } from 'node:path';
 import { tmpdir } from 'node:os';
 import { createHash } from 'node:crypto';
+import { validateReleaseReceipt } from './release-artifacts.mjs';
 const required=['GITHUB_REPOSITORY','GITHUB_SHA','GITHUB_RUN_ID','GITHUB_RUN_NUMBER','GITHUB_RUN_ATTEMPT','SPARK_BUILD_VERSION','GH_TOKEN'];
 for(const key of required)if(!process.env[key])throw new Error(`Required publication context unavailable: ${key}`);
 const {GITHUB_REPOSITORY:repo,GITHUB_SHA:source,GITHUB_RUN_ID:runId,GITHUB_RUN_NUMBER:runNumber,GITHUB_RUN_ATTEMPT:attempt,SPARK_BUILD_VERSION:version}=process.env;
@@ -22,16 +23,7 @@ const started=new Date(Math.min(...starts));
 const tag=`v${version}-run${runId}`;
 const releases=JSON.parse(gh('api','--paginate','--slurp',`repos/${repo}/releases?per_page=100`)).flat();
 if(releases.some(release=>release.tag_name===tag))throw new Error('Immutable release tag already exists. No release or asset will be overwritten.');
-const assets=[];
-for(const item of receipt.outputs){
- const local=resolve(item.path),rel=relative(process.cwd(),local);
- if(isAbsolute(item.path)||rel.startsWith('..')||!/^release[\\/](game|builder|guide)[\\/][^\\/]+$/.test(rel))throw new Error('Artifact path is outside the permitted release output.');
- if(!(/\.exe$|\.nupkg$|[\\/]RELEASES$/.test(local)))throw new Error('Unexpected release artifact type.');
- if(statSync(local).size!==item.bytes||sha256(local)!==item.sha256)throw new Error(`Artifact changed since packaging: ${basename(local)}`);
- if(assets.some(asset=>basename(asset)===basename(local)))throw new Error('Duplicate release asset name.');
- assets.push(local);
-}
-if(!assets.some(file=>file.endsWith('SparkFoundrySetup.exe'))||!assets.some(file=>file.endsWith('-full.nupkg'))||!assets.some(file=>basename(file)==='RELEASES')||assets.filter(file=>file.endsWith('.exe')).length<3)throw new Error('Required Squirrel or companion artifacts absent.');
+const assets=validateReleaseReceipt(receipt,version).map(item=>resolve(item.path));
 assets.push(resolve('release/source.json'));
 let dish=null;
 try{

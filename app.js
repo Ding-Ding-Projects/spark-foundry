@@ -1,3 +1,4 @@
+import { createSaveOwner } from './save-owner.js';
 import { newGame, CONSTELLATIONS, CHALLENGES, CHAPTERS, ACHIEVEMENTS, buyConstellation, startChallenge, abandonChallenge, launchBeacon, chapter, checkProgress, sideReward, routingSolved, producerUnlocked, PRODUCERS, UPGRADES, rate, tapPower, tap, cost, buyProducer, buyUpgrade, tick, prestigeGain, prestige, stabilize, serialize, parseSave } from './engine.js';
 
 const $ = id => document.getElementById(id);
@@ -26,20 +27,28 @@ function notify(message) {
   clearTimeout(toastTimer);
   toastTimer = setTimeout(() => $('toast').classList.remove('visible'), 5500);
 }
-try {
-  const raw = localStorage.getItem(SAVE_KEY);
-  if (raw) {
+function loadCurrentSave() {
+  state = newGame(); savingBlocked = false; welcomeMessage = '';
+  const now = Date.now();
+  lastTick = now;
+  try {
+    const raw = localStorage.getItem(SAVE_KEY);
+    if (raw) {
+      firstVisit = false;
+      const loaded = parseSave(raw, now);
+      state = loaded.state;
+      if (loaded.offlineEarned >= 1) welcomeMessage = `Welcome back. Your foundry made ${number(loaded.offlineEarned)} J while you were away.`;
+    }
+  } catch (error) {
+    savingBlocked = true;
     firstVisit = false;
-    const loaded = parseSave(raw);
-    state = loaded.state;
-    if (loaded.offlineEarned >= 1) welcomeMessage = `Welcome back. Your foundry made ${number(loaded.offlineEarned)} J while you were away.`;
+    welcomeMessage = 'Local save unavailable or invalid. It has not been overwritten. Import a backup or erase progress in settings to enable saving.';
   }
-} catch (error) {
-  savingBlocked = true;
-  firstVisit = false;
-  welcomeMessage = 'Local save unavailable or invalid. It has not been overwritten. Import a backup or erase progress in settings to enable saving.';
+  applySettings(); render();
+  if (welcomeMessage) notify(welcomeMessage);
 }
 function save() {
+  if (!ownership.canSave) return false;
   if (savingBlocked) { $('save-status').textContent = 'Saving unavailable'; return false; }
   try {
     localStorage.setItem(SAVE_KEY, serialize(state));
@@ -51,6 +60,7 @@ function save() {
   }
 }
 function settle() {
+  if (!ownership.canPlay) return;
   const now = Date.now();
   tick(state, Math.max(0, (now - lastTick) / 1000));
   lastTick = now;
@@ -70,6 +80,7 @@ function sound(frequency = 440) {
   } catch { /* Sound is optional; gameplay remains available without Web Audio. */ }
 }
 function pulse() {
+  if (!ownership.canPlay) return;
   settle();
   const earned = tap(state);
   sound(320 + Math.random() * 80);
@@ -181,10 +192,11 @@ $('settings-button').addEventListener('click', () => { stopHolding(); applySetti
 $('sound-setting').addEventListener('change', event => { state.settings.sound = event.target.checked; sound(); save(); });
 $('motion-setting').addEventListener('change', event => { state.settings.reducedMotion = event.target.checked; applySettings(); save(); });
 function confirmAction(title, description, label, action) {
+  if (!ownership.canPlay) return;
   stopHolding();
   $('confirm-title').textContent = title; $('confirm-description').textContent = description;
   $('confirm-action').textContent = label;
-  $('confirm-action').onclick = () => { $('confirm-dialog').close(); action(); };
+  $('confirm-action').onclick = () => { $('confirm-dialog').close(); if (ownership.canPlay) action(); };
   $('confirm-dialog').showModal(); $('confirm-cancel').focus();
 }
 $('confirm-cancel').addEventListener('click', () => $('confirm-dialog').close());
@@ -331,17 +343,79 @@ function renderCampaign() {
   $('routing-check').textContent = state.routingCooldown > 0 ? `Lightway cooling · ${Math.ceil(state.routingCooldown)}s` : 'Send a test pulse';
   for (const button of $('routing-grid').children) button.disabled = state.routingCooldown > 0;
 }
-setInterval(() => { settle(); render(); }, 100);
+// Keep inactive tabs truly paused, including keyboard/AT events and pending dialogs.
+const sessionNotice = document.createElement('section');
+sessionNotice.className = 'session-notice';
+sessionNotice.setAttribute('aria-label', 'Game session');
+const sessionMessage = document.createElement('p');
+sessionMessage.setAttribute('role', 'status');
+const sessionButton = document.createElement('button');
+sessionButton.className = 'secondary';
+sessionNotice.append(sessionMessage, sessionButton);
+document.querySelector('main').before(sessionNotice);
+let sessionMode = 'waiting';
+function sessionStatus(mode) {
+  sessionMode = mode;
+  const playing = ownership.canPlay;
+  document.querySelector('main').inert = !playing;
+  $('settings-button').disabled = !playing;
+  sessionNotice.hidden = mode === 'active';
+  const messages = {
+    waiting: 'Paused while another tab plays. Close that tab, or request play here. Your latest save will load before play resumes.',
+    paused: 'Paused to protect your save. Choose Play in this tab to load the latest progress and resume. If another tab is playing, it must save and pause first.',
+    unsupported: 'Safe shared saving is unavailable in this browser. You can play a temporary session and export a backup; it will not change your local save.',
+    temporary: 'Temporary session — automatic saving is off. Export a backup in settings before leaving. Your existing local save is untouched.',
+    'save-failed': 'Could not save for transfer. This tab is still playing. Export a backup in settings or fix local saving before trying again.',
+    unavailable: 'The game could not load. Reload this page to try again.',
+  };
+  sessionMessage.textContent = messages[mode] || '';
+  sessionButton.hidden = ['active', 'temporary', 'save-failed', 'unavailable'].includes(mode);
+  sessionButton.textContent = mode === 'unsupported' ? 'Play without automatic saving' : 'Play in this tab';
+  if (!playing) $('save-status').textContent = 'Paused · no changes saved';
+  if (mode === 'active') $('save-status').textContent = savingBlocked ? 'Saving unavailable' : 'Local save ready';
+  if (mode === 'temporary') $('save-status').textContent = 'Temporary · export a backup';
+}
+let saveChannel;
+try { saveChannel = new BroadcastChannel('spark-foundry-save-owner'); } catch { /* Closing the owning tab still releases its Web Lock. */ }
+const ownership = createSaveOwner({
+  locks: navigator.locks,
+  channel: saveChannel,
+  load: loadCurrentSave,
+  flush: () => { settle(); return save(); },
+  pause: () => {
+    stopHolding(); cancelSideGames(); tuning = false;
+    $('timing-track').classList.remove('active');
+    for (const id of ['settings-dialog', 'confirm-dialog']) $(id).close();
+  },
+  status: sessionStatus,
+});
+sessionButton.addEventListener('click', () => {
+  if (sessionMode === 'unsupported') ownership.playTemporary();
+  else ownership.requestPlay();
+});
+for (const type of ['click', 'pointerdown', 'keydown', 'change']) document.addEventListener(type, event => {
+  if (!ownership.canPlay && (event.target.closest('main, #settings-dialog, #confirm-dialog') || event.target === $('settings-button'))) {
+    event.preventDefault(); event.stopImmediatePropagation();
+  }
+}, true);
+setInterval(() => { if (ownership.canPlay) { settle(); render(); } }, 100);
 setInterval(save, 5000);
 document.addEventListener('visibilitychange', () => {
   settle(); stopHolding();
   if (document.hidden) { tuning = false; $('timing-track').classList.remove('active'); save(); }
   render();
 });
-window.addEventListener('pagehide', () => { settle(); save(); });
+window.addEventListener('pagehide', () => ownership.leave());
+window.addEventListener('pageshow', () => ownership.acquire());
 applySettings(); render(); requestAnimationFrame(animate);
 // First-run setup is owned by the shared preferences module.
-if (welcomeMessage) notify(welcomeMessage);
-if (savingBlocked) $('save-status').textContent = 'Saving unavailable';
+ownership.acquire();
 
-window.desktop?.onBeforeClose(() => { settle(); stopHolding(); return save(); });
+window.addEventListener('beforeunload', event => {
+  if (ownership.canPlay && !ownership.canSave) { event.preventDefault(); event.returnValue = ''; }
+});
+window.desktop?.onBeforeClose(() => {
+  settle(); stopHolding();
+  if (ownership.canPlay && !ownership.canSave) return window.confirm('This temporary session has not been saved. Export a backup from settings before closing if you want to keep it. Close without saving?');
+  return !ownership.canSave || save();
+});

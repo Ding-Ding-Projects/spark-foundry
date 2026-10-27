@@ -1,6 +1,7 @@
 import { spawnSync } from 'node:child_process';
-import { readdirSync, rmSync } from 'node:fs';
-import { sourceIdentity, verifyFile, record } from './build-receipt.mjs';
+import { rmSync } from 'node:fs';
+import { sourceIdentity, record } from './build-receipt.mjs';
+import { collectReleaseArtifacts } from './release-artifacts.mjs';
 if(process.platform !== 'win32') throw new Error('Windows packaging requires a Windows build host. No installer was produced.');
 const source=sourceIdentity();
 const version=process.env.SPARK_BUILD_VERSION;
@@ -14,10 +15,6 @@ for(const mode of ['game','builder','guide']) {
  if(result.error) throw result.error;
  if(result.status!==0) process.exit(result.status||1);
 }
-const outputs=[];
-for(const mode of ['game','builder','guide'])for(const name of readdirSync(`release/${mode}`)){
- if(name.endsWith('.exe')||name.endsWith('.nupkg')||name==='RELEASES')outputs.push(verifyFile(`release/${mode}/${name}`,name.endsWith('.exe')?'exe':name.endsWith('.nupkg')?'nupkg':'feed'));
-}
-if(!outputs.some(x=>x.path.endsWith('/RELEASES'))||!outputs.some(x=>x.path.endsWith('-full.nupkg'))||outputs.filter(x=>x.path.endsWith('.exe')).length<3)throw new Error('Required installer or companion artifacts missing.');
+const outputs=collectReleaseArtifacts(version||'1.0.0');
 record('release/source.json',source,outputs);
 for(const output of outputs)console.log(`${output.sha256}  ${output.path} (${output.bytes} bytes)`);

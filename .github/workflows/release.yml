@@ -134,7 +134,7 @@ jobs:
         run: |
           $target = Join-Path $env:RUNNER_TEMP 'spark-release-evidence'
           New-Item -ItemType Directory -Force $target | Out-Null
-          foreach ($pattern in @('release/game/*.exe','release/game/*.nupkg','release/game/RELEASES','release/builder/*.exe','release/guide/*.exe','release/source.json','release/publication.json','release/runnable.json')) {
+          foreach ($pattern in @('release/game/squirrel-windows/SparkFoundrySetup.exe',"release/game/squirrel-windows/spark_foundry-${env:SPARK_BUILD_VERSION}-full.nupkg",'release/game/squirrel-windows/RELEASES',"release/builder/SparkFoundryBuilder-${env:SPARK_BUILD_VERSION}.exe","release/guide/SparkFoundryGuide-${env:SPARK_BUILD_VERSION}.exe",'release/source.json','release/publication.json','release/runnable.json')) {
             Get-ChildItem $pattern -File -ErrorAction SilentlyContinue | Copy-Item -Destination $target
           }
           @{runId=$env:GITHUB_RUN_ID;attempt=$env:GITHUB_RUN_ATTEMPT;source=$env:GITHUB_SHA;status=$env:FINAL_JOB_STATUS;runner=$env:RUNNER_NAME;os=$env:RUNNER_OS;architecture=$env:RUNNER_ARCH} | ConvertTo-Json | Set-Content (Join-Path $target 'run.json')

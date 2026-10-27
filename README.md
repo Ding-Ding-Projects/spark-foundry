@@ -59,8 +59,8 @@ The desktop application uses Electron, not a separately rewritten native game en
 
 | Output | Purpose | Current status |
 | --- | --- | --- |
-| `release/game/SparkFoundrySetup.exe` | Unsigned Squirrel.Windows game installer | Packaging source; binary and Windows install verification pending |
-| `release/game/RELEASES` and `*-full.nupkg` | Squirrel update feed and package | Publication and end-to-end update verification pending |
+| `release/game/squirrel-windows/SparkFoundrySetup.exe` | Unsigned Squirrel.Windows game installer | Packaging source; binary and Windows install verification pending |
+| `release/game/squirrel-windows/RELEASES` and `*-full.nupkg` | Squirrel update feed and package | Publication and end-to-end update verification pending |
 | `release/builder/SparkFoundryBuilder-VERSION.exe` | Portable build companion | Packaging source; Windows execution pending |
 | `release/guide/SparkFoundryGuide-VERSION.exe` | Portable offline handbook | Packaging source; Windows execution pending |
 

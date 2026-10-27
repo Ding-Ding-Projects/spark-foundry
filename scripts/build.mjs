@@ -5,7 +5,7 @@ import { fileURLToPath } from 'node:url';
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 // Only these public assets may enter the deployable output.
-const files = ['index.html', 'style.css', 'app.js', 'engine.js', 'docs.html', 'docs.js', 'preview.html', 'preferences.js', 'preferences-copy.js', 'preferences.css', 'regex-workbench.js', 'regex-worker.js', 'regex-workbench.css', 'regex-capabilities.md'];
+const files = ['index.html', 'style.css', 'app.js', 'engine.js', 'save-owner.js', 'docs.html', 'docs.js', 'preview.html', 'preferences.js', 'preferences-copy.js', 'preferences.css', 'regex-workbench.js', 'regex-worker.js', 'regex-workbench.css', 'regex-capabilities.md'];
 for (const file of files) {
   const path = resolve(root, file);
   if (!(await stat(path)).isFile()) throw new Error(`Missing public asset: ${file}`);
@@ -34,6 +34,7 @@ const fingerprint = text => createHash('sha256').update(text).digest('hex').slic
 // Resolve dependency fingerprints bottom-up, including the isolated worker URL.
 for (const [file, dependency] of [
   ['app.js', 'engine.js'],
+  ['app.js', 'save-owner.js'],
   ['regex-workbench.js', 'regex-worker.js'],
   ['docs.js', 'regex-workbench.js'],
   ['preferences.js', 'preferences-copy.js'],
