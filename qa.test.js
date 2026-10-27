@@ -21,7 +21,7 @@ test('all automation and research work; research cannot be repurchased', () => {
   const s = funded(100000);
   for (let i = 0; i < 4; i++) assert.equal(G.buyProducer(s, i), true);
   assert.equal(G.rate(s), 630);
-  for (const u of G.UPGRADES) {
+  for (const u of G.UPGRADES.filter(u => u.requiresRunEarned <= s.runEarned)) {
     assert.equal(G.buyUpgrade(s, u.id), true);
     const energy = s.energy;
     assert.equal(G.buyUpgrade(s, u.id), false);
@@ -52,7 +52,7 @@ test('prestige thresholds, reset, permanent bonus, and no repeated claim', () =>
   assert.equal(s.totalEarned, 25000);
   assert.equal(s.energy, 0);
   assert.equal(s.runEarned, 0);
-  assert.deepEqual(s.producers, [0, 0, 0, 0]);
+  assert.deepEqual(s.producers, G.PRODUCERS.map(() => 0));
   assert.deepEqual(s.upgrades, []);
   assert.deepEqual(s.settings, { sound: true, reducedMotion: true });
   assert.equal(G.tapPower(s), 1.25);
@@ -114,7 +114,7 @@ test('malformed and oversized saves are rejected', () => {
 });
 
 test('inconsistent totals, settings, version, and fractional stars rejected', () => {
-  for (const patch of [{ energy: 1 }, { runEarned: 1 }, { version: 2 }, { stars: 0.5 }, { settings: [] }, { settings: { sound: 1, reducedMotion: false } }]) {
+  for (const patch of [{ energy: 1 }, { runEarned: 1 }, { version: 3 }, { stars: 0.5 }, { settings: [] }, { settings: { sound: 1, reducedMotion: false } }]) {
     assert.throws(() => G.parseSave(JSON.stringify({ ...G.newGame(1000), ...patch })));
   }
 });
@@ -133,7 +133,7 @@ test('save reconstruction drops unknown and prototype-pollution properties', () 
 
 test('extreme accepted saves remain finite through production, tap, and prestige', () => {
   const s = funded(G.MAX_VALUE);
-  s.stars = G.MAX_VALUE; s.producers = [2000, 2000, 2000, 2000];
+  s.stars = G.MAX_VALUE; s.producers = G.PRODUCERS.map(() => 2000);
   s.upgrades = G.UPGRADES.map(u => u.id);
   const safe = roundTrip(s);
   assert.equal(G.buyProducer(safe, 0), false);
@@ -153,7 +153,7 @@ test('ten thousand deterministic mixed actions preserve valid save invariants', 
     switch (Math.floor(random() * 7)) {
       case 0: G.tap(s); break;
       case 1: G.tick(s, random() * 200); break;
-      case 2: G.buyProducer(s, Math.floor(random() * 4)); break;
+      case 2: G.buyProducer(s, Math.floor(random() * G.PRODUCERS.length)); break;
       case 3: G.buyUpgrade(s, G.UPGRADES[Math.floor(random() * G.UPGRADES.length)].id); break;
       case 4: G.stabilize(s, random()); break;
       case 5: G.prestige(s); break;

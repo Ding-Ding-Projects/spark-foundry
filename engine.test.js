@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { newGame, tap, tapPower, rate, tick, cost, buyProducer, buyUpgrade, prestigeGain, prestige, stabilize, serialize, parseSave, OFFLINE_CAP, MAX_VALUE } from './engine.js';
+import { newGame, tap, tapPower, rate, tick, cost, buyProducer, buyUpgrade, prestigeGain, prestige, stabilize, serialize, parseSave, OFFLINE_CAP, MAX_VALUE, PRODUCERS } from './engine.js';
 function funded(amount = 10000) { const s = newGame(1000); s.energy = s.runEarned = s.totalEarned = amount; return s; }
 test('new game starts with no output; twelve taps buy first collector', () => {
   const s = newGame(1000); assert.equal(rate(s), 0); assert.equal(tapPower(s), 1);
@@ -36,7 +36,7 @@ test('prestige rewards run production and resets only the run', () => {
   const s = funded(100000); s.producers[1] = 3; s.upgrades = ['gloves']; s.settings.sound = true;
   assert.equal(prestigeGain(s), 2); assert.equal(prestige(s), 2);
   assert.equal(s.stars, 2); assert.equal(s.runEarned, 0); assert.equal(s.totalEarned, 100000);
-  assert.equal(s.energy, 0); assert.deepEqual(s.producers, [0, 0, 0, 0]); assert.deepEqual(s.upgrades, []);
+  assert.equal(s.energy, 0); assert.deepEqual(s.producers, PRODUCERS.map(() => 0)); assert.deepEqual(s.upgrades, []);
   assert.equal(s.settings.sound, true); assert.equal(tapPower(s), 1.5); assert.equal(prestige(s), 0);
 });
 test('save roundtrip is stable and independent', () => {
@@ -57,7 +57,7 @@ test('offline progress caps at four hours and consumes temporary boost once', ()
 });
 test('invalid save schemas and unsafe numeric input are rejected', () => {
   for (const text of ['', 'null', '[]', '{}', '{', 'x'.repeat(20001)]) assert.throws(() => parseSave(text));
-  for (const patch of [{ energy: -1 }, { energy: '1' }, { version: 2 }, { stars: .5 }, { producers: [1] }, { upgrades: ['gloves','gloves'] }, { upgrades: ['unknown'] }, { settings: {sound: false} }, { boostsRemaining: 16 }, { lastSaved: -1 }]) {
+  for (const patch of [{ energy: -1 }, { energy: '1' }, { version: 3 }, { stars: .5 }, { producers: [1] }, { upgrades: ['gloves','gloves'] }, { upgrades: ['unknown'] }, { settings: {sound: false} }, { boostsRemaining: 16 }, { lastSaved: -1 }]) {
     assert.throws(() => parseSave(JSON.stringify({ ...newGame(0), ...patch }), 100));
   }
   assert.throws(() => parseSave('{"version":1,"energy":1e999}'));

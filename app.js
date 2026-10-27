@@ -1,4 +1,4 @@
-import { newGame, PRODUCERS, UPGRADES, rate, tapPower, tap, cost, buyProducer, buyUpgrade, tick, prestigeGain, prestige, stabilize, serialize, parseSave } from './engine.js';
+import { newGame, CONSTELLATIONS, CHALLENGES, CHAPTERS, ACHIEVEMENTS, buyConstellation, startChallenge, abandonChallenge, launchBeacon, chapter, checkProgress, sideReward, routingSolved, producerUnlocked, PRODUCERS, UPGRADES, rate, tapPower, tap, cost, buyProducer, buyUpgrade, tick, prestigeGain, prestige, stabilize, serialize, parseSave } from './engine.js';
 
 const $ = id => document.getElementById(id);
 const SAVE_KEY = 'spark-foundry-v1';
@@ -40,12 +40,14 @@ try {
   welcomeMessage = 'Local save unavailable or invalid. It has not been overwritten. Import a backup or erase progress in settings to enable saving.';
 }
 function save() {
-  if (savingBlocked) { $('save-status').textContent = 'Saving unavailable'; return; }
+  if (savingBlocked) { $('save-status').textContent = 'Saving unavailable'; return false; }
   try {
     localStorage.setItem(SAVE_KEY, serialize(state));
     $('save-status').textContent = 'Saved on this device';
+    return true;
   } catch {
     $('save-status').textContent = 'Save unavailable · export a backup';
+    return false;
   }
 }
 function settle() {
@@ -102,7 +104,7 @@ $('ignite').addEventListener('click', event => { if (event.detail === 0 && !hold
 $('ignite').addEventListener('blur', stopHolding);
 window.addEventListener('blur', stopHolding);
 
-const symbols = ['⌁', '⟐', '♨', '◎'];
+const symbols = ['⌁', '⟐', '♨', '◎', '✿', '⧖', '✺'];
 for (const [index, producer] of PRODUCERS.entries()) {
   const row = document.createElement('article'); row.className = 'producer';
   row.innerHTML = `<div class="machine-icon" aria-hidden="true">${symbols[index]}</div><div><h3>${producer.name} <span id="owned-${index}">0</span></h3><p>${producer.description}</p><small id="output-${index}">+${number(producer.rate)} J / sec base</small></div><button class="buy-button" id="buy-${index}"><span id="cost-${index}">${producer.cost} J</span><small>BUILD +1</small></button>`;
@@ -125,20 +127,23 @@ for (const upgrade of UPGRADES) {
   });
 }
 function render() {
+  checkProgress(state);
+  renderCampaign();
   $('energy').textContent = number(state.energy);
   $('rate').textContent = number(rate(state));
   $('stars').textContent = number(state.stars);
   $('star-bonus').textContent = `Permanent +${number(state.stars * 25)}% power`;
   $('tap-power').textContent = `+${number(tapPower(state))} J / pulse`;
-  const level = state.runEarned < 12 ? 1 : state.runEarned < 100 ? 2 : state.runEarned < 1200 ? 3 : state.runEarned < 25000 ? 4 : 5;
+  const level = chapter(state) < 0 ? 6 : chapter(state) + 1;
   $('level').textContent = String(level).padStart(2, '0');
-  $('level-label').textContent = ['First light', 'Awakening', 'Gathering power', 'Stellar industry', 'Supernova ready'][level - 1];
+  $('level-label').textContent = state.completed ? 'The expanse is alight' : CHAPTERS[level - 1].name;
   $('core-status').textContent = state.boostsRemaining > 0 ? 'RESONANCE ACTIVE' : state.producers.some(Boolean) ? 'FOUNDRY ONLINE' : 'MANUAL IGNITION';
   PRODUCERS.forEach((p, i) => {
     $(`owned-${i}`).textContent = number(state.producers[i]);
     const price = cost(state, i);
-    $(`cost-${i}`).textContent = `${number(price)} J`;
-    $(`buy-${i}`).disabled = state.energy < price || !Number.isFinite(price);
+    $(`cost-${i}`).textContent = producerUnlocked(state, i) ? `${number(price)} J` : `At ${number(p.unlock)} J earned`;
+    $(`output-${i}`).textContent = !producerUnlocked(state, i) ? 'Keep expanding to unlock this machine.' : `+${number(p.rate)} J / sec base`;
+    $(`buy-${i}`).disabled = !producerUnlocked(state, i) || (state.challenge === 'compact' && state.producers[i] >= 5) || state.energy < price || !Number.isFinite(price);
     $(`buy-${i}`).setAttribute('aria-label', `Build ${p.name} for ${number(price)} joules. ${state.producers[i]} owned.`);
   });
   for (const u of UPGRADES) {
@@ -160,27 +165,12 @@ function render() {
   renderGoal();
 }
 function renderGoal() {
-  let title, target, value, description;
-  if (!state.producers[0]) {
-    title = 'Build your first Spark collector'; target = cost(state, 0); value = state.energy;
-    description = 'Earn 12 J, then build a collector. It produces energy automatically.';
-  } else if (!state.upgrades.includes('gloves')) {
-    title = 'Research Conductive gloves'; target = 35; value = state.energy;
-    description = 'Double the energy from each pulse. Your first breakthrough awaits below.';
-  } else if (!state.producers[1]) {
-    title = 'Bring an Ion dynamo online'; target = cost(state, 1); value = state.energy;
-    description = 'Expand beyond collectors. Your first dynamo generates 9 J per second before bonuses.';
-  } else {
-    const nextStars = prestigeGain(state) + 1;
-    target = nextStars * nextStars * 25000; value = state.runEarned;
-    title = nextStars === 1 ? 'Prepare your first supernova' : `Reach a ${number(nextStars)}-star supernova`;
-    description = prestigeGain(state) ? 'Reset now for star essence, or keep building to earn a larger reward.' : 'Earn 25,000 J over this run to unlock a fresh start with permanent power.';
-  }
-  $('goal-title').textContent = title;
-  $('goal-count').textContent = `${number(value)} / ${number(target)} J`;
-  $('goal-progress').max = target; $('goal-progress').value = Math.min(value, target);
-  $('goal-progress').setAttribute('aria-label', title);
-  $('goal-description').textContent = description;
+  const index = chapter(state), goal = CHAPTERS[index < 0 ? 5 : index];
+  $('goal-title').textContent = state.completed ? 'The beacon is lit. Your sky is limitless.' : goal.name;
+  $('goal-count').textContent = `${number(Math.min(state.runEarned, goal.target))} / ${number(goal.target)} J earned`;
+  $('goal-progress').max = goal.target; $('goal-progress').value = Math.min(state.runEarned, goal.target);
+  $('goal-progress').setAttribute('aria-label', goal.name);
+  $('goal-description').textContent = state.completed ? 'Campaign complete. Keep building in endless mode, try contracts, or go supernova to explore your constellation.' : `${goal.story} ${!state.producers[goal.producer] ? 'Machine still needed. ' : ''}${!state.upgrades.includes(goal.research) ? 'Research still needed.' : ''}`;
 }
 function applySettings() {
   $('sound-setting').checked = state.settings.sound;
@@ -201,13 +191,13 @@ $('confirm-cancel').addEventListener('click', () => $('confirm-dialog').close())
 $('prestige').addEventListener('click', () => {
   const gain = prestigeGain(state);
   if (!gain) return;
-  confirmAction('A brighter beginning?', `Gain ${number(gain)} star essence. Each star permanently adds 25% power. Stored energy, machines, research, and this run's progress will reset. Existing stars and settings remain.`, 'Go supernova', () => {
-    settle(); const earned = prestige(state); tuning = false; $('timing-track').classList.remove('active');
+  confirmAction('A brighter beginning?', `Gain ${number(gain)} star essence. Each star permanently adds 25% power. Stored energy, machines, research, and this run's progress will reset. Existing stars, constellation abilities, achievements, completed contracts and settings remain. Any active contract ends.`, 'Go supernova', () => {
+    settle(); const earned = prestige(state); cancelSideGames(); tuning = false; $('timing-track').classList.remove('active');
     notify(`A new beginning. +${number(earned)} star essence. Your light grows stronger.`); sound(880); render(); save();
   });
 });
 $('reset').addEventListener('click', () => confirmAction('Erase your universe?', 'This cannot be undone. All machines, research, energy, and permanent star essence will be erased. Export a backup first if you might want to return.', 'Erase everything', () => {
-  state = newGame(); lastTick = Date.now(); savingBlocked = false; tuning = false;
+  state = newGame(); cancelSideGames(); lastTick = Date.now(); savingBlocked = false; tuning = false;
   $('timing-track').classList.remove('active'); applySettings(); render(); save();
   $('settings-dialog').close(); notify('A clean slate. Your next spark is waiting.');
 }));
@@ -228,7 +218,7 @@ $('import-file').addEventListener('change', async event => {
     const preview = parseSave(text, Date.now(), { offline: false }).state;
     confirmAction('Replace this universe?', `Import ${number(preview.energy)} J of stored energy and ${number(preview.stars)} stars? This replaces current progress. Export your current save first if you want a backup.`, 'Replace with import', () => {
       const imported = parseSave(text);
-      state = imported.state; lastTick = Date.now(); savingBlocked = false; tuning = false;
+      state = imported.state; cancelSideGames(); lastTick = Date.now(); savingBlocked = false; tuning = false;
       $('timing-track').classList.remove('active'); applySettings(); render(); save();
       $('settings-dialog').close(); notify('Save imported. Welcome to your foundry.');
     });
@@ -264,6 +254,83 @@ function animate(now) {
   }
   requestAnimationFrame(animate);
 }
+
+// Side activities use session-local boards; rewards and cooldowns are persistent.
+let memorySequence = [], memoryInput = [], memoryPhase = 'idle';
+const pipeGlyphs = ['━', '┃', '┗', '┏', '┓', '┛'];
+const pipeNames = ['east–west', 'north–south', 'north–east', 'east–south', 'south–west', 'west–north'];
+let pipes = [3, 1, 5, 0, 2, 0, 4, 5, 3];
+function cancelSideGames() { memorySequence = []; memoryInput = []; memoryPhase = 'idle'; $('memory-status').textContent = 'Ready to receive a signal.'; }
+for (let i = 1; i <= 4; i++) {
+  const button = document.createElement('button'); button.className = 'secondary'; button.textContent = String(i); button.setAttribute('aria-label', `Signal ${i}`);
+  button.addEventListener('click', () => {
+    if (memoryPhase !== 'repeat') return;
+    memoryInput.push(i);
+    if (memoryInput.at(-1) !== memorySequence[memoryInput.length - 1]) {
+      settle(); sideReward(state, 'memory', false); memoryPhase = 'idle'; $('memory-status').textContent = 'Signal lost. No energy lost. Try a fresh sequence after cooldown.'; save();
+    } else if (memoryInput.length === memorySequence.length) {
+      settle(); sideReward(state, 'memory', true); memoryPhase = 'idle'; $('memory-status').textContent = 'Relay restored! Production reward delivered.'; notify('Echo relay solved. Bonus energy received.'); save();
+    } else $('memory-status').textContent = `${memoryInput.length} of 4 signals received. Keep going.`;
+    render();
+  });
+  $('memory-pads').append(button);
+}
+$('memory-start').addEventListener('click', () => {
+  settle(); if (state.memoryCooldown > 0) return;
+  if (memoryPhase === 'show') { memoryPhase = 'repeat'; $('memory-status').textContent = 'Repeat the four signals using the numbered buttons.'; }
+  else if (memoryPhase === 'idle') { memorySequence = Array.from({length: 4}, () => 1 + Math.floor(Math.random() * 4)); memoryInput = []; memoryPhase = 'show'; $('memory-status').textContent = `Incoming sequence: ${memorySequence.join(' · ')}. Take your time.`; }
+  render();
+});
+function renderPipes() {
+  [...$('routing-grid').children].forEach((button, i) => { button.textContent = pipeGlyphs[pipes[i]]; button.setAttribute('aria-label', `Row ${Math.floor(i / 3) + 1}, column ${i % 3 + 1}: ${pipeNames[pipes[i]]}. Activate to change conduit.`); });
+}
+for (let i = 0; i < 9; i++) {
+  const button = document.createElement('button'); button.className = 'pipe-button';
+  button.addEventListener('click', () => { if (state.routingCooldown > 0) return; pipes[i] = (pipes[i] + 1) % 6; renderPipes(); });
+  $('routing-grid').append(button);
+}
+renderPipes();
+$('routing-check').addEventListener('click', () => {
+  settle(); if (state.routingCooldown > 0) return;
+  if (!routingSolved(pipes)) { $('routing-status').textContent = 'The pulse stops before OUT. Keep adjusting; test pulses are free.'; return; }
+  sideReward(state, 'routing', true); $('routing-status').textContent = 'Lightway connected! Production reward delivered. A new board awaits after cooldown.';
+  pipes = Array.from({length: 9}, () => Math.floor(Math.random() * 6)); renderPipes(); save(); render();
+});
+for (const c of CONSTELLATIONS) {
+  const row = document.createElement('article'); row.className = 'upgrade'; row.innerHTML = `<div><h3>${c.name}</h3><p>${c.description}</p></div><button class="secondary" id="constellation-${c.id}"></button>`;
+  $('constellations').append(row);
+  $(`constellation-${c.id}`).addEventListener('click', () => { settle(); if (buyConstellation(state, c.id)) { notify(`${c.name} joins your constellation.`); save(); render(); } });
+}
+for (const c of CHALLENGES) {
+  const row = document.createElement('article'); row.className = 'upgrade'; row.innerHTML = `<div><h3>${c.name}</h3><p>${c.description}</p></div><button class="secondary" id="challenge-${c.id}">Start contract</button>`;
+  $('challenges').append(row);
+  $(`challenge-${c.id}`).addEventListener('click', () => confirmAction(`Begin ${c.name}?`, 'This resets current energy, machines and research without granting stars. Your permanent progress is safe. You can leave the contract at any time and keep the new run.', 'Begin contract', () => { settle(); if (startChallenge(state, c.id)) { cancelSideGames(); tuning = false; $('timing-track').classList.remove('active'); notify('Contract underway. Your objective is in the expedition panel.'); save(); render(); } }));
+}
+$('abandon-challenge').addEventListener('click', () => { abandonChallenge(state); notify('Contract left. Your machines and energy remain.'); save(); render(); });
+$('launch-beacon').addEventListener('click', () => { settle(); if (launchBeacon(state)) { notify('The expanse answers. Every outpost has a way home. Campaign complete!'); sound(880); save(); render(); } });
+for (const c of CHAPTERS) { const li = document.createElement('li'); li.textContent = c.name; $('chapter-list').append(li); }
+for (const a of ACHIEVEMENTS) { const div = document.createElement('div'); div.id = `achievement-${a.id}`; div.innerHTML = `<strong>${a.name}</strong><small>${a.description}</small>`; $('achievements').append(div); }
+function renderCampaign() {
+  const current = chapter(state);
+  [...$('chapter-list').children].forEach((li, i) => { const c = CHAPTERS[i]; const done = state.runEarned >= c.target && state.producers[c.producer] > 0 && state.upgrades.includes(c.research); li.textContent = `${done ? '✓' : '○'} ${c.name}`; li.classList.toggle('done', done); });
+  $('campaign-story').textContent = state.completed ? 'Your beacon bridges the darkness. Ships return, windows glow, and the quiet expanse is quiet no longer.' : `Chapter ${current < 0 ? 6 : current + 1} of 6 · ${CHAPTERS[current < 0 ? 5 : current].story}`;
+  $('launch-beacon').disabled = state.completed || current !== -1 || state.energy < 5000000;
+  $('launch-beacon').textContent = state.completed ? '✓ Campaign complete · endless mode active' : 'Launch beacon · 5M J';
+  $('ending-status').textContent = state.completed ? 'Thank you, starmaker. Your foundry keeps running. Optional contracts, constellation discoveries and endless growth remain yours.' : 'Complete all chapter objectives, then spend 5M stored J. No minigames or prestige required.';
+  $('essence-balance').textContent = `${number(state.stars - state.spentStars)} unspent essence · ${number(state.stars)} lifetime stars. Spending never reduces your permanent power.`;
+  for (const c of CONSTELLATIONS) { const done = state.constellations.includes(c.id), button = $(`constellation-${c.id}`); button.disabled = done || state.stars - state.spentStars < c.cost; button.textContent = done ? '✓ Permanent' : `${c.cost} essence`; }
+  const active = CHALLENGES.find(c => c.id === state.challenge);
+  $('challenge-status').textContent = active ? `${active.name}: ${number(state.runEarned)} / ${number(active.target)} J earned. Completion is automatic.` : state.stars ? 'Choose a different way to build. Rewards are awarded once and never stack.' : 'Go supernova once to unlock contracts.';
+  $('abandon-challenge').hidden = !active;
+  for (const c of CHALLENGES) { const done = state.completedChallenges.includes(c.id); const button = $(`challenge-${c.id}`); button.disabled = !!active || !state.stars || done; button.textContent = done ? '✓ Reward earned' : 'Start contract'; }
+  for (const a of ACHIEVEMENTS) { const node = $(`achievement-${a.id}`); node.classList.toggle('done', state.achievements.includes(a.id)); node.setAttribute('aria-label', `${a.name}: ${state.achievements.includes(a.id) ? 'earned' : 'not yet earned'}. ${a.description}`); }
+  $('memory-start').disabled = state.memoryCooldown > 0 || memoryPhase === 'repeat';
+  $('memory-start').textContent = state.memoryCooldown > 0 ? `Relay cooling · ${Math.ceil(state.memoryCooldown)}s` : memoryPhase === 'show' ? 'Hide sequence · ready to repeat' : memoryPhase === 'repeat' ? 'Repeat using the buttons above' : 'Receive sequence';
+  for (const button of $('memory-pads').children) button.disabled = memoryPhase !== 'repeat';
+  $('routing-check').disabled = state.routingCooldown > 0;
+  $('routing-check').textContent = state.routingCooldown > 0 ? `Lightway cooling · ${Math.ceil(state.routingCooldown)}s` : 'Send a test pulse';
+  for (const button of $('routing-grid').children) button.disabled = state.routingCooldown > 0;
+}
 setInterval(() => { settle(); render(); }, 100);
 setInterval(save, 5000);
 document.addEventListener('visibilitychange', () => {
@@ -276,3 +343,5 @@ applySettings(); render(); requestAnimationFrame(animate);
 if (firstVisit) $('welcome-dialog').showModal();
 if (welcomeMessage) notify(welcomeMessage);
 if (savingBlocked) $('save-status').textContent = 'Saving unavailable';
+
+window.desktop?.onBeforeClose(() => { settle(); stopHolding(); return save(); });

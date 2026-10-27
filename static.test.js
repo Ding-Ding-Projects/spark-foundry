@@ -77,3 +77,21 @@ test('phone CSS declares touch targets, flexible content and short-screen dialog
   assert.match(guide, /header a,nav a,footer a\{min-height:44px/);
   assert.match(guide, /code\{white-space:normal;overflow-wrap:anywhere\}/);
 });
+
+test('all literal game element lookups resolve to an HTML element', () => {
+  const known = new Set(ids(read('index.html')));
+  for (const match of read('app.js').matchAll(/\$\('([^']+)'\)/g)) {
+    assert.ok(known.has(match[1]), `Missing game element: ${match[1]}`);
+  }
+});
+
+test('campaign and optional puzzle controls are present with keyboard-native buttons', () => {
+  const html = read('index.html');
+  for (const id of ['memory-start','routing-check','launch-beacon','abandon-challenge']) {
+    assert.match(html, new RegExp(`<button\\b[^>]*id="${id}"`));
+  }
+  for (const id of ['memory-status','routing-status','ending-status','challenge-status']) {
+    const tag = [...html.matchAll(/<[^/!][^>]*>/g)].map(m=>m[0]).find(tag=>attrs(tag).id===id);
+    assert.equal(attrs(tag).role, 'status');
+  }
+});

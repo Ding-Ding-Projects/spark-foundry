@@ -36,5 +36,6 @@ for (const file of files.filter(file => file.endsWith('.html'))) {
   }
   assets.set(file, html);
 }
+assets.set('preview.html', assets.get('preview.html').replaceAll('"index.html"', `"index.html?v=${fingerprint(assets.get('index.html'))}"`));
 for (const [file, contents] of assets) await writeFile(resolve(output, file), contents);
 console.log(`Built ${files.length} validated public assets in dist/.`);
