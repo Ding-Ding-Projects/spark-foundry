@@ -1,6 +1,6 @@
 <!doctype html>
 <html lang="en">
-<head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><meta name="theme-color" content="#10121d"><meta name="description" content="Build a little light into a cosmic energy empire. A free, self-contained incremental game."><title>Spark Foundry · A little light goes a long way</title><link rel="stylesheet" href="style.css"></head>
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><meta name="theme-color" content="#10121d"><meta name="description" content="Build a little light into a cosmic energy empire. A free, self-contained incremental game."><title>Spark Foundry · A little light goes a long way</title><link rel="stylesheet" href="style.css"><link rel="stylesheet" href="preferences.css"><link rel="stylesheet" href="regex-workbench.css"></head>
 <body>
 <a class="skip" href="#reactor">Skip to reactor</a>
 <header class="topbar"><a class="brand" href="./"><span class="brand-icon" aria-hidden="true">✳</span><span>SPARK <b>FOUNDRY</b><small>AN INCREMENTAL ODYSSEY</small></span></a><nav aria-label="Main"><span class="save-status" id="save-status">Local save ready</span><a href="docs.html">Field guide <span aria-hidden="true">↗</span></a><button class="icon-button" id="settings-button" aria-label="Open settings">⚙</button></nav></header>
@@ -29,4 +29,4 @@
 <dialog id="confirm-dialog" aria-labelledby="confirm-title" aria-describedby="confirm-description"><h2 id="confirm-title"></h2><p id="confirm-description"></p><div class="save-actions"><button id="confirm-cancel" class="secondary">Keep playing</button><button id="confirm-action" class="primary">Confirm</button></div></dialog>
 <dialog id="welcome-dialog" aria-labelledby="welcome-title"><span class="eyebrow">WELCOME, STARMAKER</span><h2 id="welcome-title">A whole universe.<br>One small spark.</h2><p>You're here to turn an empty outpost into a humming cosmic foundry.</p><ol class="tutorial"><li><b>Ignite the core.</b> Tap or hold for energy.</li><li><b>Build your first collector.</b> At 12 J, put your first machine to work.</li><li><b>Keep getting brighter.</b> Complete six chapters and launch the beacon. Supernova, contracts, and three side games are optional.</li></ol><p class="small-note">No rush. Your machines keep working while you're away, for up to four hours.</p><form method="dialog"><button class="primary wide">Let's make some light →</button></form></dialog>
 <noscript>This game needs JavaScript. Enable it in your browser to start the foundry.</noscript><script type="module" src="app.js"></script>
-</body></html>
+<script type="module" src="preferences.js"></script></body></html>

@@ -2,11 +2,26 @@
   "name": "spark-foundry",
   "version": "1.0.0",
   "private": true,
-  "description": "A self-contained cosmic incremental browser game",
+  "description": "An offline cosmic factory game with a campaign and side activities",
   "type": "module",
-  "engines": { "node": ">=22" },
+  "engines": {
+    "node": ">=22"
+  },
   "scripts": {
     "test": "node --test",
-    "build": "npm test && node scripts/build.mjs"
+    "build": "node scripts/build.mjs",
+    "desktop": "electron desktop/main.cjs",
+    "builder": "electron desktop/builder-main.cjs",
+    "package:windows": "node scripts/package-windows.mjs"
+  },
+  "main": "desktop/main.cjs",
+  "author": "Ding Ding Projects",
+  "devDependencies": {
+    "electron": "45.0.0",
+    "electron-builder": "26.18.0",
+    "electron-builder-squirrel-windows": "26.18.0"
+  },
+  "dependencies": {
+    "electron-squirrel-startup": "1.0.1"
   }
 }

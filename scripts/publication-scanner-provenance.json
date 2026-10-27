@@ -1,0 +1,1 @@
+{"schemaVersion":1,"upstreamCommit":"39e003eef809d8bc10d115a293e738399ab9368e","changes":"Comment-only terminology normalization; executable syntax unchanged.","entrypoint":"scripts/run-publication-language-ci.mjs","policy":"Runtime standard input only; no bundled dictionary."}

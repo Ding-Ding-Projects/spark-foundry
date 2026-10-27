@@ -1,0 +1,40 @@
+{
+  "schema": 1,
+  "node": {
+    "version": "24.22.1",
+    "url": "https://nodejs.org/dist/v24.22.1/node-v24.22.1-win-x64.zip",
+    "sha256": "d2046d28c2c3dcd211ac5145c0bf30e2047ef9dfb306693c8c6e2eccd8b95fa5",
+    "archiveRoot": "node-v24.22.1-win-x64",
+    "target": ".tools/node"
+  },
+  "target": {
+    "platform": "win32",
+    "arch": "x64",
+    "entrypoint": "desktop/main.cjs",
+    "executable": "release/game/win-unpacked/Spark Foundry.exe"
+  },
+  "commands": {
+    "build": "npm run build",
+    "package": "npm run package:windows",
+    "run": ".tools/node/node.exe scripts/run-built.mjs"
+  },
+  "outputs": {
+    "assets": "dist",
+    "game": "release/game",
+    "builder": "release/builder",
+    "guide": "release/guide"
+  },
+  "updateFeed": "https://github.com/Ding-Ding-Projects/spark-foundry/releases/latest/download/",
+  "git": {
+    "version": "2.56.0.windows.4",
+    "url": "https://github.com/git-for-windows/git/releases/download/v2.56.0.windows.4/MinGit-2.56.0.4-64-bit.zip",
+    "sha256": "e3bf78351fe777fba47ddee5950082f8a98bb0f02604fdc7ba3ee2cb68ffa877",
+    "target": ".tools/git"
+  },
+  "electron": {
+    "version": "45.0.0",
+    "url": "https://github.com/electron/electron/releases/download/v45.0.0/electron-v45.0.0-win32-x64.zip",
+    "sha256": "ae53887a23bb640369c93dbd38c408a2af5c0deb86f2fa76c6c244cb444b7f47",
+    "target": "node_modules/electron/dist"
+  }
+}

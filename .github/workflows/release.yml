@@ -1,0 +1,149 @@
+name: Windows release
+on:
+  push:
+    branches: ['**']
+  workflow_dispatch:
+permissions:
+  contents: write
+  actions: read
+concurrency:
+  group: windows-release-${{ github.repository }}
+  cancel-in-progress: false
+jobs:
+  publication-language:
+    runs-on: windows-2022
+    timeout-minutes: 15
+    permissions:
+      contents: read
+    env:
+      NODE_OPTIONS: ''
+      NODE_PATH: ''
+    steps:
+      - name: Validate trusted policy pin and event scope
+        shell: powershell
+        env:
+          POLICY_SHA: ${{ vars.PUBLICATION_SCAN_POLICY_SHA }}
+          BASE_SHA: ${{ github.event.before }}
+          EVENT_NAME: ${{ github.event_name }}
+        run: |
+          if ($env:POLICY_SHA -notmatch '^[a-f0-9]{40}$') { throw 'Trusted publication policy pin unavailable.' }
+          if ($env:GITHUB_SHA -notmatch '^[a-f0-9]{40}$') { throw 'Candidate source identity unavailable.' }
+          if ($env:EVENT_NAME -eq 'push' -and ($env:BASE_SHA -notmatch '^[a-f0-9]{40}$' -or $env:BASE_SHA -eq ('0' * 40))) { throw 'Event base publication unknown.' }
+      - name: Read trusted pinned scanner
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          ref: ${{ vars.PUBLICATION_SCAN_POLICY_SHA }}
+          path: trusted-policy
+          persist-credentials: false
+          submodules: false
+          lfs: false
+      - name: Read candidate as data only
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          ref: ${{ github.sha }}
+          path: candidate
+          fetch-depth: 0
+          persist-credentials: false
+          submodules: false
+          lfs: false
+      - name: Bootstrap scanner runtime
+        uses: actions/setup-node@v4
+        with:
+          node-version: '24.22.1'
+      - name: Enforce publication language with protected stdin
+        shell: powershell
+        env:
+          PUBLICATION_LANGUAGE_DATA: ${{ secrets.PUBLICATION_LANGUAGE_DATA }}
+          BASE_SHA: ${{ github.event.before }}
+          EVENT_NAME: ${{ github.event_name }}
+        run: |
+          if ([string]::IsNullOrWhiteSpace($env:PUBLICATION_LANGUAGE_DATA)) { throw 'Protected publication policy unavailable.' }
+          @'
+          const {spawnSync}=require('node:child_process');
+          const path=require('node:path');
+          const args=[path.join(process.env.GITHUB_WORKSPACE,'trusted-policy/scripts/run-publication-language-ci.mjs'),'--root',path.join(process.env.GITHUB_WORKSPACE,'candidate'),'--tip',process.env.GITHUB_SHA,'--exceptions-file',path.join(process.env.GITHUB_WORKSPACE,'trusted-policy/scripts/public-language-exceptions.json')];
+          if(process.env.EVENT_NAME==='workflow_dispatch')args.push('--mode','current-tree-only');
+          else if(process.env.EVENT_NAME==='push')args.push('--mode','history','--base',process.env.BASE_SHA);
+          else throw new Error('Unsupported publication event.');
+          const env={...process.env};
+          for(const key of Object.keys(env))if(key==='PUBLICATION_LANGUAGE_DATA'||key==='NODE_OPTIONS'||key==='NODE_PATH'||key.startsWith('GIT_'))delete env[key];
+          const result=spawnSync(process.execPath,args,{input:process.env.PUBLICATION_LANGUAGE_DATA,env,stdio:['pipe','inherit','inherit']});
+          if(result.error)throw result.error;
+          process.exit(result.status??2);
+          '@ | node
+      - name: Collect safe policy evidence
+        if: ${{ always() }}
+        continue-on-error: true
+        shell: powershell
+        env:
+          FINAL_JOB_STATUS: ${{ job.status }}
+        run: |
+          $target = Join-Path $env:RUNNER_TEMP 'spark-policy-evidence'
+          New-Item -ItemType Directory -Force $target | Out-Null
+          @{runId=$env:GITHUB_RUN_ID;attempt=$env:GITHUB_RUN_ATTEMPT;source=$env:GITHUB_SHA;status=$env:FINAL_JOB_STATUS;runner=$env:RUNNER_NAME;os=$env:RUNNER_OS;architecture=$env:RUNNER_ARCH;scope=if($env:GITHUB_EVENT_NAME -eq 'workflow_dispatch'){'current-tree-only'}else{'event-history'}} | ConvertTo-Json | Set-Content (Join-Path $target 'policy-run.json')
+      - name: Retain safe policy evidence
+        if: ${{ always() }}
+        continue-on-error: true
+        uses: actions/upload-artifact@v4
+        with:
+          name: publication-policy-${{ github.run_id }}-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/spark-policy-evidence/
+          if-no-files-found: warn
+          retention-days: 14
+  release:
+    needs: publication-language
+    runs-on: windows-2022
+    timeout-minutes: 60
+    env:
+      SPARK_BUILD_VERSION: 1.${{ github.run_number }}.${{ github.run_attempt }}
+      SILENT: '1'
+    steps:
+      - name: Check out exact source
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Bootstrap declared dependencies
+        shell: cmd
+        run: call download-dependencies.bat /s
+      - name: Activate project-local tools
+        shell: powershell
+        run: |
+          "$env:GITHUB_WORKSPACE\.tools\node" | Out-File -FilePath $env:GITHUB_PATH -Append -Encoding utf8
+          "$env:GITHUB_WORKSPACE\.tools\git\cmd" | Out-File -FilePath $env:GITHUB_PATH -Append -Encoding utf8
+      - name: Build runnable Windows application
+        shell: cmd
+        run: call build.bat /s
+      - name: Build unsigned Squirrel installer and portable companions
+        shell: cmd
+        run: call build-installer.bat /s
+      - name: Bootstrap release tools
+        shell: powershell
+        run: ./scripts/bootstrap-release.ps1
+      - name: Publish and verify exact-source normal release
+        env:
+          GH_TOKEN: ${{ secrets.RELEASE_TOKEN || secrets.ORG_TOKEN || secrets.GITHUB_TOKEN }}
+        shell: powershell
+        run: node scripts/publish-release.mjs
+      - name: Collect safe build evidence
+        if: ${{ always() }}
+        continue-on-error: true
+        shell: powershell
+        env:
+          FINAL_JOB_STATUS: ${{ job.status }}
+        run: |
+          $target = Join-Path $env:RUNNER_TEMP 'spark-release-evidence'
+          New-Item -ItemType Directory -Force $target | Out-Null
+          foreach ($pattern in @('release/game/*.exe','release/game/*.nupkg','release/game/RELEASES','release/builder/*.exe','release/guide/*.exe','release/source.json','release/publication.json','release/runnable.json')) {
+            Get-ChildItem $pattern -File -ErrorAction SilentlyContinue | Copy-Item -Destination $target
+          }
+          @{runId=$env:GITHUB_RUN_ID;attempt=$env:GITHUB_RUN_ATTEMPT;source=$env:GITHUB_SHA;status=$env:FINAL_JOB_STATUS;runner=$env:RUNNER_NAME;os=$env:RUNNER_OS;architecture=$env:RUNNER_ARCH} | ConvertTo-Json | Set-Content (Join-Path $target 'run.json')
+      - name: Retain safe outputs, including failed builds
+        if: ${{ always() }}
+        continue-on-error: true
+        uses: actions/upload-artifact@v4
+        with:
+          name: windows-release-${{ github.run_id }}-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/spark-release-evidence/
+          if-no-files-found: warn
+          retention-days: 14

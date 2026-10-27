@@ -340,7 +340,7 @@ document.addEventListener('visibilitychange', () => {
 });
 window.addEventListener('pagehide', () => { settle(); save(); });
 applySettings(); render(); requestAnimationFrame(animate);
-if (firstVisit) $('welcome-dialog').showModal();
+// First-run setup is owned by the shared preferences module.
 if (welcomeMessage) notify(welcomeMessage);
 if (savingBlocked) $('save-status').textContent = 'Saving unavailable';
 
