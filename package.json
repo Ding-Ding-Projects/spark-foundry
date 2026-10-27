@@ -1,0 +1,12 @@
+{
+  "name": "spark-foundry",
+  "version": "1.0.0",
+  "private": true,
+  "description": "A self-contained cosmic incremental browser game",
+  "type": "module",
+  "engines": { "node": ">=22" },
+  "scripts": {
+    "test": "node --test",
+    "build": "npm test && node scripts/build.mjs"
+  }
+}
