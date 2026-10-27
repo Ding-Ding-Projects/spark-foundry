@@ -1,4 +1,4 @@
-import { newGame, PRODUCERS, UPGRADES, rate, tapPower, tap, cost, buyProducer, buyUpgrade, tick, prestigeGain, prestige, stabilize, serialize, parseSave } from './engine.js';
+import { newGame, PRODUCERS, UPGRADES, rate, tapPower, tap, cost, buyProducer, buyUpgrade, tick, prestigeGain, prestige, stabilize, serialize, parseSave } from './engine.js?v=189fca3ebfc5';
 
 const $ = id => document.getElementById(id);
 const SAVE_KEY = 'spark-foundry-v1';
