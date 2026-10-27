@@ -41,3 +41,28 @@ test('All desktop targets satisfy the pinned electron-builder configuration sche
  for(const mode of ['game','builder','guide']){process.env.SPARK_PACKAGE_MODE=mode;delete require.cache[require.resolve('./desktop/package-config.cjs')];await validateConfiguration(require('./desktop/package-config.cjs'),{isEnabled:false});}
  delete process.env.SPARK_PACKAGE_MODE;
 });
+
+test('Batch entrypoints preserve their own path while parsing every supported flag',()=>{
+ for(const file of ['build.bat','build-installer.bat','download-dependencies.bat']){
+  const script=read(file);assert.match(script,/set "PROJECT_ROOT=%~dp0"/);
+  assert.doesNotMatch(script,/^shift\s*$/mi);assert.doesNotMatch(script,/%~dp0(?!")/);
+  assert.match(script,/cd \/d "%PROJECT_ROOT%"/);
+ }
+ const build=read('build.bat');assert.match(build,/^shift \/1$/m);
+ for(const flag of ['/s','--silent','/run','--run'])assert.ok(build.includes(`"${flag}"`));
+ assert.ok(build.indexOf('set "PROJECT_ROOT=%~dp0"')<build.indexOf(':args'));
+ assert.match(build,/call "%PROJECT_ROOT%download-dependencies\.bat" \/s/);
+ assert.match(build,/"%SILENT%"=="1"/);assert.match(build,/"%RUN_AFTER_BUILD%"=="1"/);
+});
+
+test('Pinned Squirrel adapter prepares 7-Zip without enabling dependency lifecycle scripts',async()=>{
+ const {mkdtempSync,copyFileSync,readFileSync,rmSync}=fs;const {tmpdir}=await import('node:os');const {join}=await import('node:path');
+ const Adapter=require('electron-builder-squirrel-windows').default;
+ const vendor=join(require.resolve('electron-winstaller/package.json'),'..','vendor');
+ const root=mkdtempSync(join(tmpdir(),'spark-vendor-'));
+ try{
+  for(const ext of ['exe','dll'])copyFileSync(join(vendor,`7z-${process.arch}.${ext}`),join(root,`7z-${process.arch}.${ext}`));
+  Adapter.prototype.select7zipArch.call({},root);
+  for(const ext of ['exe','dll'])assert.deepEqual(readFileSync(join(root,`7z.${ext}`)),readFileSync(join(vendor,`7z-${process.arch}.${ext}`)));
+ }finally{rmSync(root,{recursive:true,force:true});}
+});

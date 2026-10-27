@@ -1,4 +1,6 @@
 $ErrorActionPreference = 'Stop'
+# Suppress legacy progress rendering only; errors, phase logs and integrity checks remain active.
+$ProgressPreference = 'SilentlyContinue'
 # Release-tool bootstrap is deliberately fail-closed until a reviewed canonical pin exists.
 $manifest = Join-Path $PSScriptRoot 'release-tools.json'
 if (!(Test-Path $manifest)) { throw 'Missing reviewed GitHub CLI archive pin: scripts/release-tools.json. No release was published.' }

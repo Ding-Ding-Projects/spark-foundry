@@ -1,18 +1,19 @@
 @echo off
 setlocal
-cd /d "%~dp0"
+set "PROJECT_ROOT=%~dp0"
+cd /d "%PROJECT_ROOT%"
 :args
 if "%~1"=="" goto parsed
 if /i "%~1"=="/s" set "SILENT=1"
 if /i "%~1"=="--silent" set "SILENT=1"
 if /i "%~1"=="/run" set "RUN_AFTER_BUILD=1"
 if /i "%~1"=="--run" set "RUN_AFTER_BUILD=1"
-shift
+shift /1
 goto args
 :parsed
-call "%~dp0download-dependencies.bat" /s
+call "%PROJECT_ROOT%download-dependencies.bat" /s
 if errorlevel 1 exit /b %errorlevel%
-if exist "%~dp0.tools\node\node.exe" set "PATH=%~dp0.tools\node;%~dp0.tools\git\cmd;%PATH%"
+if exist "%PROJECT_ROOT%.tools\node\node.exe" set "PATH=%PROJECT_ROOT%.tools\node;%PROJECT_ROOT%.tools\git\cmd;%PATH%"
 call npm run build
 if errorlevel 1 exit /b %errorlevel%
 node scripts\package-runnable.mjs

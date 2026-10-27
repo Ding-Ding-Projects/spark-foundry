@@ -1,5 +1,7 @@
 param([switch]$InstallPackages)
 $ErrorActionPreference = 'Stop'
+# Suppress legacy progress rendering only; errors, phase logs and integrity checks remain active.
+$ProgressPreference = 'SilentlyContinue'
 $started = Get-Date
 $root = Split-Path $PSScriptRoot -Parent
 $manifest = Get-Content (Join-Path $root 'build-manifest.json') -Raw | ConvertFrom-Json
